@@ -1,0 +1,307 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+  height: 100vh; overflow: hidden;
+}
+
+.screen { position: relative; width: 100vw; height: 100vh; }
+
+/* Background image — extended past edges so blur doesn't show seams */
+.bg-img {
+  position: absolute;
+  inset: -24px;
+  background-image: url('../assets/background.jpg');
+  background-size: cover; background-position: center;
+  filter: blur(14px);
+  transform: scale(1.06);
+}
+
+/* White wash on top of blurred image */
+.overlay {
+  position: absolute; inset: 0;
+  background: rgba(255, 255, 255, 0.80);
+}
+
+.content {
+  position: relative; z-index: 2;
+  height: 100vh; display: flex; flex-direction: column;
+}
+
+/* ── Header bar ─────────────────────────── */
+.page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: clamp(8px, 1.1vh, 18px) clamp(20px, 2.5vw, 40px);
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+  position: relative;
+}
+.page-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, #9B2D8A 20%, #7a1565 50%, #9B2D8A 80%, transparent 100%);
+}
+
+/* Left / Right sections flank the logo */
+.header-section {
+  display: flex; flex-direction: column;
+  gap: 5px; flex: 1;
+}
+.header-left { align-items: flex-end; text-align: right; }
+.header-right { align-items: flex-start; }
+
+/* Logo — centered, enlarged */
+.brand-logo-wrap {
+  flex-shrink: 0;
+  padding: 0 clamp(14px, 2vw, 32px);
+  line-height: 0;
+}
+.brand-logo { height: clamp(52px, 8vh, 88px); display: block; }
+
+/* School name — EN and AR same size */
+.brand-name-en {
+  font-size: clamp(13px, 1.55vw, 23px);
+  color: #2e2e2e; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; white-space: nowrap;
+}
+.brand-name-ar {
+  font-size: clamp(13px, 1.55vw, 23px);
+  color: #9B2D8A; font-weight: 600;
+  direction: rtl; letter-spacing: 1px; white-space: nowrap;
+}
+
+/* Event info */
+.event-title {
+  font-size: clamp(13px, 1.55vw, 23px);
+  color: #2e2e2e; font-weight: 600; letter-spacing: 1px; white-space: nowrap;
+}
+.event-tagline {
+  font-size: clamp(9px, 0.9vw, 14px);
+  color: #9B2D8A;
+  letter-spacing: 3px; text-transform: uppercase; white-space: nowrap;
+}
+
+/* ── Stations row ───────────────────────── */
+.stations-row {
+  display: flex; gap: clamp(6px, 0.7vw, 12px); flex: 1;
+  align-items: stretch; overflow: hidden;
+  padding: clamp(8px, 1vw, 16px) clamp(10px, 1.2vw, 20px);
+}
+
+/* ── Station card ───────────────────────── */
+.st-card {
+  flex: 1; min-width: 0;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 16px;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 2px 18px rgba(0, 0, 0, 0.09);
+  backdrop-filter: blur(6px);
+  transition: border-color 0.4s, background 0.4s, box-shadow 0.4s;
+}
+.st-card.active {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(155, 45, 138, 0.55);
+  border-width: 2px;
+  box-shadow: 0 4px 28px rgba(155, 45, 138, 0.16);
+}
+
+/* Station header — purple band with equal EN/AR sizes */
+.st-header {
+  background: linear-gradient(135deg, #7a1565 0%, #9b2082 100%);
+  padding: clamp(5px, 0.8vh, 13px) 12px;
+  text-align: center; flex-shrink: 0;
+}
+.st-name-en {
+  color: #fff; font-weight: 700;
+  font-size: clamp(11px, calc(8.5vw / var(--sc, 4)), 26px);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25;
+}
+.st-name-ar {
+  color: rgba(255, 255, 255, 0.88); font-weight: 600;
+  font-size: clamp(11px, calc(8.5vw / var(--sc, 4)), 26px);
+  direction: rtl; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  line-height: 1.2; margin-top: 2px;
+}
+
+/* Card body — top-aligned so big numbers stay at the same position across all cards */
+.st-body {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center;
+  padding: clamp(8px, 1.2vh, 18px) 8px clamp(6px, 1vh, 14px);
+  gap: clamp(4px, 0.55vh, 9px);
+}
+
+/* When queue is hidden / size=0: vertically center the serving number */
+.st-card.center-num .st-body {
+  justify-content: center;
+}
+
+.now-label {
+  font-size: clamp(7px, calc(4vw / var(--sc, 4)), 12px);
+  color: rgba(0, 0, 0, 0.32); letter-spacing: 3px; text-transform: uppercase;
+  white-space: nowrap; flex-shrink: 0;
+}
+
+/* Big serving number — purple on white */
+.now-num {
+  font-size: clamp(28px, calc(50vw / var(--sc, 4)), 190px);
+  font-weight: 900; color: #8B1F6B; line-height: 1;
+  transition: color 0.3s, transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  text-align: center; flex-shrink: 0;
+}
+.now-num.flash { color: #c030a0; transform: scale(1.1); }
+.now-num.empty { color: rgba(0, 0, 0, 0.11); font-size: clamp(20px, calc(18vw / var(--sc, 4)), 72px); }
+
+.st-divider {
+  width: clamp(20px, 3vw, 52px); height: 2px;
+  background: rgba(155, 45, 138, 0.22);
+  border-radius: 2px; flex-shrink: 0;
+}
+
+/* Queue items */
+.q-list {
+  width: 100%; display: flex; flex-direction: column;
+  gap: clamp(3px, 0.4vh, 6px); padding: 0 4px;
+}
+.q-item {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(155, 45, 138, 0.06);
+  border-radius: 8px;
+  padding: clamp(2px, 0.35vh, 6px) clamp(4px, 0.5vw, 10px);
+}
+.qi-ord {
+  font-size: clamp(8px, calc(3vw / var(--sc, 4)), 12px);
+  color: rgba(0, 0, 0, 0.22); min-width: 14px; text-align: center; flex-shrink: 0;
+}
+.qi-num {
+  font-size: clamp(12px, calc(12vw / var(--sc, 4)), 34px);
+  font-weight: 700; color: #6b1558; flex: 1; text-align: center;
+}
+
+.st-empty {
+  font-size: clamp(8px, 0.85vw, 11px);
+  color: rgba(0, 0, 0, 0.18); font-style: italic;
+}
+
+.waiting-msg {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  font-size: 20px; color: rgba(0, 0, 0, 0.25);
+  letter-spacing: 4px; text-transform: uppercase;
+}
+
+/* ── ON BREAK card ──────────────────────── */
+.st-card.break-card {
+  opacity: 0.6;
+}
+.st-card.break-card .st-header {
+  background: linear-gradient(135deg, #888 0%, #aaa 100%);
+}
+.on-break-icon {
+  font-size: clamp(22px, calc(18vw / var(--sc, 4)), 64px);
+  line-height: 1; opacity: 0.45; flex-shrink: 0;
+}
+.on-break-text {
+  font-size: clamp(9px, calc(5vw / var(--sc, 4)), 16px);
+  color: rgba(0, 0, 0, 0.28);
+  letter-spacing: 4px; text-transform: uppercase; font-style: italic;
+}
+
+/* ── NOW CALLING overlay ────────────────── */
+.calling-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  background: rgba(38, 0, 32, 0.93);
+  backdrop-filter: blur(22px);
+}
+.calling-overlay.visible {
+  animation: co-fade 4.5s ease forwards;
+}
+@keyframes co-fade {
+  0%   { opacity: 0; }
+  7%   { opacity: 1; }
+  84%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.co-inner {
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center;
+  gap: clamp(6px, 1.4vh, 18px);
+  padding: 0 clamp(24px, 5vw, 80px);
+  width: 100%;
+}
+
+.co-label {
+  font-size: clamp(11px, 1.4vw, 20px);
+  color: rgba(255, 255, 255, 0.42);
+  letter-spacing: 7px; text-transform: uppercase;
+}
+
+.co-number {
+  font-size: clamp(110px, 30vw, 520px);
+  font-weight: 900; color: #fff; line-height: 0.92;
+  text-shadow: 0 0 80px rgba(210, 80, 190, 0.55), 0 0 160px rgba(210, 80, 190, 0.25);
+  letter-spacing: -0.02em;
+}
+
+.co-divider {
+  width: clamp(50px, 8vw, 120px); height: 3px;
+  background: rgba(200, 70, 180, 0.65);
+  border-radius: 2px;
+}
+
+.co-proceed {
+  font-size: clamp(10px, 1.2vw, 18px);
+  color: rgba(255, 255, 255, 0.38);
+  letter-spacing: 4px; text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Single centered row: EN name · separator · AR name */
+.co-name-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: clamp(10px, 2vw, 28px);
+  white-space: nowrap;
+  max-width: 92vw;
+}
+
+.co-name-sep {
+  display: inline-block;
+  width: 2px; height: 0.75em;
+  background: rgba(255, 255, 255, 0.22);
+  flex-shrink: 0; align-self: center;
+}
+
+.co-station {
+  color: #fff; font-weight: 800;
+  white-space: nowrap;
+  letter-spacing: 2px; text-transform: uppercase;
+  font-size: clamp(16px, 4.5vw, 68px); /* overridden by JS auto-shrink */
+}
+
+.co-station-ar {
+  color: #fff; font-weight: 800;
+  white-space: nowrap;
+  font-size: clamp(16px, 4.5vw, 68px); /* overridden by JS auto-shrink */
+}
+
+/* ── Sound button ───────────────────────── */
+.sound-btn {
+  position: fixed; bottom: 14px; right: 16px; z-index: 300;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  padding: 5px 14px; font-size: 12px; cursor: pointer;
+  color: rgba(0, 0, 0, 0.45);
+  transition: background 0.2s, color 0.2s;
+}
+.sound-btn:hover { background: rgba(255, 255, 255, 0.92); color: rgba(0, 0, 0, 0.75); }
+.sound-btn.active { color: #6b1558; border-color: rgba(155, 45, 138, 0.3); }

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Control Panel — NASA International Schools</title>
+<link rel="stylesheet" href="css/control.css">
+</head>
+<body>
+
+<div class="topbar">
+  <input class="tb-input" id="new-cid" placeholder="ID or range e.g. 250-270…" onkeydown="if(event.key==='Enter')addCandidate()" />
+  <button class="tb-btn" onclick="addCandidate()">+ Add</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="undo-btn" onclick="undo()" disabled title="Undo last action (Ctrl+Z)">↺ Undo</button>
+  <button class="tb-btn" onclick="autoDistribute()" title="Spread all unassigned candidates evenly across active stations">⚡ Auto-fill</button>
+  <button class="tb-btn" onclick="exportLog()" title="Download served/ghosted log as CSV">↓ Log</button>
+  <button class="tb-btn reset-btn" onclick="openResetModal()" title="Reset options">⟳ Reset</button>
+  <div class="tb-sep"></div>
+  <div class="settings-group">
+    <span>Queue visible:</span>
+    <input type="number" id="q-size-inp" min="0" max="10" value="3" onchange="setQueueSize(+this.value)" />
+    <button class="toggle-btn on" id="show-q-btn" onclick="toggleShowQueue()">✓ Shown</button>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="served-badge">Served: <b id="served-total">0</b> &nbsp;·&nbsp; Ghosted: <b id="ghosted-total">0</b></div>
+  <div class="tb-sep"></div>
+  <div class="brand">Control Panel — NASA International Schools</div>
+  <a href="display.html" target="_blank" class="open-display">↗ Display Screen</a>
+</div>
+
+<div class="board" id="board">
+  <div class="column" id="col-unassigned"
+    ondragover="onColOver(event,'unassigned')"
+    ondragleave="onColLeave(event,'unassigned')"
+    ondrop="onColDrop(event,'unassigned')">
+    <div class="col-header">
+      <span class="col-title">Unassigned</span>
+      <span class="col-badge" id="u-badge">0</span>
+    </div>
+    <div class="unassigned-scroll" id="pool-unassigned"></div>
+  </div>
+
+  <div id="stations-area" style="display:contents"></div>
+
+  <div class="add-col-btn">
+    <button class="add-station-btn" onclick="promptStation()" title="Add station">+</button>
+  </div>
+</div>
+
+<!-- ── Reset Modal ─────────────────────── -->
+<div id="reset-modal" class="modal-overlay" onclick="if(event.target===this)closeResetModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Reset Options</span>
+      <button class="modal-close" onclick="closeResetModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="reset-group">
+        <div class="reset-group-label">Candidates</div>
+        <button class="reset-opt" onclick="doReset('queues')">
+          <span class="ro-icon">↩</span>
+          <div class="ro-text">
+            <div class="ro-title">Flush Queues</div>
+            <div class="ro-desc">Move all queued candidates back to Unassigned. Serving slots are untouched.</div>
+          </div>
+        </button>
+        <button class="reset-opt" onclick="doReset('unassigned')">
+          <span class="ro-icon">🗑</span>
+          <div class="ro-text">
+            <div class="ro-title">Clear Unassigned Pool</div>
+            <div class="ro-desc">Remove all candidates waiting in the Unassigned pool.</div>
+          </div>
+        </button>
+        <button class="reset-opt" onclick="doReset('ghosted')">
+          <span class="ro-icon">👻</span>
+          <div class="ro-text">
+            <div class="ro-title">Clear Ghosted List</div>
+            <div class="ro-desc">Discard all no-show candidates from the ghosted list.</div>
+          </div>
+        </button>
+      </div>
+
+      <div class="reset-group">
+        <div class="reset-group-label">Data</div>
+        <button class="reset-opt" onclick="doReset('log')">
+          <span class="ro-icon">📋</span>
+          <div class="ro-text">
+            <div class="ro-title">Clear Activity Log</div>
+            <div class="ro-desc">Wipe the served/ghosted history and reset counters. Export first if you need the data.</div>
+          </div>
+        </button>
+      </div>
+
+      <div class="reset-group">
+        <div class="reset-group-label reset-group-label--danger">Destructive</div>
+        <button class="reset-opt reset-opt--danger" onclick="doReset('session')">
+          <span class="ro-icon">⟳</span>
+          <div class="ro-text">
+            <div class="ro-title">New Session</div>
+            <div class="ro-desc">Clear all candidates, queues, and log. Stations and their names are kept.</div>
+          </div>
+        </button>
+        <button class="reset-opt reset-opt--full" onclick="doReset('full')">
+          <span class="ro-icon">💥</span>
+          <div class="ro-text">
+            <div class="ro-title">Full Reset</div>
+            <div class="ro-desc">Delete everything — stations, candidates, all data. Completely blank slate.</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/control.js"></script>
+</body>
+</html>

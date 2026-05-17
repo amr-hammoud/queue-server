@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Display Screen — NASA International Schools</title>
+<link rel="stylesheet" href="css/display.css">
+</head>
+<body>
+<div class="screen">
+  <div class="bg-img"></div>
+  <div class="overlay"></div>
+  <div class="content">
+    <div class="page-header">
+      <div class="header-section header-left">
+        <div class="brand-name-en">NASA International Schools</div>
+        <div class="brand-name-ar">مدارس ناسا العالمية</div>
+      </div>
+      <div class="brand-logo-wrap">
+        <img class="brand-logo" src="assets/logo.png" alt="NASA International Schools">
+      </div>
+      <div class="header-section header-right">
+        <div class="event-title">Annual Recruitment Fair</div>
+        <div class="event-tagline">Home of Visionaries</div>
+      </div>
+    </div>
+    <div class="stations-row" id="stations-row">
+      <div class="waiting-msg">Waiting for session to begin…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Now Calling overlay — briefly flashes when a new number is called -->
+<div id="calling-overlay" class="calling-overlay">
+  <div class="co-inner">
+    <div class="co-label">Now Calling · يُخدم الآن</div>
+    <div class="co-number"></div>
+    <div class="co-divider"></div>
+    <div class="co-proceed">Please proceed to &nbsp;·&nbsp; يرجى التوجه إلى</div>
+    <div class="co-name-row">
+      <span class="co-station"></span>
+      <span class="co-name-sep"></span>
+      <span class="co-station-ar"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Sound enable button — bottom-right corner -->
+<button id="sound-btn" class="sound-btn" onclick="enableSound()" title="Click to enable audio alerts">🔇 Sound off</button>
+
+<script src="js/display.js"></script>
+</body>
+</html>
