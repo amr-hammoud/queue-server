@@ -10,12 +10,15 @@ let S = {
   ghosted:    [],
   done:       [],
   log:        [],
-  settings:   { queueSize: 3, showQueue: true }
+  settings:   { queueSize: 3, showQueue: true },
+  serveStart: {},
+  serveTimes: {}
 };
 
 // null | { type:'card', cid, fromStation, fromZone } | { type:'column', stationId }
 let drag = null;
-let undoStack = [];
+let undoStack  = [];
+let dismissUndo = {}; // { stationId: { cid, startedAt, timer } }
 
 /* ── PERSISTENCE ─────────────────────────── */
 function save() { localStorage.setItem('nasa_q_v2', JSON.stringify(S)); }
@@ -24,10 +27,12 @@ function load() {
     const d = localStorage.getItem('nasa_q_v2');
     if (d) {
       S = JSON.parse(d);
-      S.onBreak = S.onBreak || {};
-      S.hidden  = S.hidden  || {};
-      S.ghosted = S.ghosted || [];
-      S.log     = S.log     || [];
+      S.onBreak    = S.onBreak    || {};
+      S.hidden     = S.hidden     || {};
+      S.ghosted    = S.ghosted    || [];
+      S.log        = S.log        || [];
+      S.serveStart = S.serveStart || {};
+      S.serveTimes = S.serveTimes || {};
     }
   } catch(e) {}
 }
@@ -52,6 +57,37 @@ function undo() {
 function refreshUndoBtn() {
   const btn = document.getElementById('undo-btn');
   if (btn) btn.disabled = undoStack.length === 0;
+}
+
+/* ── SERVE TIMING ────────────────────────── */
+function recordServeDuration(stationId) {
+  const start = (S.serveStart || {})[stationId];
+  if (!start) return;
+  const dur = Date.now() - start;
+  S.serveTimes = S.serveTimes || {};
+  S.serveTimes[stationId] = S.serveTimes[stationId] || [];
+  S.serveTimes[stationId].push(dur);
+  if (S.serveTimes[stationId].length > 50) S.serveTimes[stationId].shift();
+  delete S.serveStart[stationId];
+}
+
+function avgServiceMs(stationId) {
+  const times = (S.serveTimes || {})[stationId] || [];
+  const MIN = 30_000;
+  const MAX = 30 * 60_000;
+  const valid = times.filter(t => t >= MIN && t <= MAX);
+  if (valid.length < 3) return 5 * 60_000;
+  return valid.reduce((a, b) => a + b, 0) / valid.length;
+}
+
+function estimatedWaitMins(stationId, queueLength) {
+  if (!queueLength) return 0;
+  const avgMs = avgServiceMs(stationId);
+  const serveStart = (S.serveStart || {})[stationId];
+  const remainingCurrent = serveStart ? Math.max(0, avgMs - (Date.now() - serveStart)) : 0;
+  const totalMs = remainingCurrent + avgMs * (queueLength - 1);
+  if (totalMs < 60_000) return 0;
+  return Math.round(totalMs / 60_000);
 }
 
 /* ── UTILS ───────────────────────────────── */
@@ -189,10 +225,13 @@ function callNext(stationId) {
   if (!q.length) return;
   saveUndo();
   if (S.serving[stationId]) {
+    recordServeDuration(stationId);
     logEntry(stationId, S.serving[stationId], 'served');
     S.done.push(S.serving[stationId]);
   }
   S.serving[stationId] = q.shift();
+  S.serveStart = S.serveStart || {};
+  S.serveStart[stationId] = Date.now();
   sync();
 }
 
@@ -200,9 +239,30 @@ function dismiss(stationId) {
   const cid = S.serving[stationId];
   if (!cid) return;
   saveUndo();
+  const startedAt = (S.serveStart || {})[stationId] || null;
+  recordServeDuration(stationId);
   logEntry(stationId, cid, 'served');
   S.done.push(cid);
   S.serving[stationId] = null;
+  if (dismissUndo[stationId]) clearTimeout(dismissUndo[stationId].timer);
+  dismissUndo[stationId] = {
+    cid, startedAt,
+    timer: setTimeout(() => { delete dismissUndo[stationId]; render(); }, 6000)
+  };
+  sync();
+}
+
+function undoDismiss(stationId) {
+  const entry = dismissUndo[stationId];
+  if (!entry) return;
+  clearTimeout(entry.timer);
+  delete dismissUndo[stationId];
+  S.done = S.done.filter(x => x !== entry.cid);
+  S.serving[stationId] = entry.cid;
+  if (entry.startedAt) {
+    S.serveStart = S.serveStart || {};
+    S.serveStart[stationId] = entry.startedAt;
+  }
   sync();
 }
 
@@ -218,6 +278,8 @@ function ghostCandidate(stationId) {
   if (!cid) return;
   saveUndo();
   logEntry(stationId, cid, 'ghosted');
+  S.serveStart = S.serveStart || {};
+  delete S.serveStart[stationId];
   S.serving[stationId] = null;
   S.ghosted = S.ghosted || [];
   S.ghosted.push(cid);
@@ -258,6 +320,81 @@ function exportLog() {
   a.click();
 }
 
+/* ── SESSION SUMMARY ─────────────────────── */
+function openSummary() {
+  const body = document.getElementById('summary-body');
+  if (!body) return;
+
+  const stationServed  = {};
+  const stationGhosted = {};
+  S.stations.forEach(st => { stationServed[st.id] = 0; stationGhosted[st.id] = 0; });
+  (S.log || []).forEach(e => {
+    if (e.type === 'served')  stationServed[e.stationId]  = (stationServed[e.stationId]  || 0) + 1;
+    if (e.type === 'ghosted') stationGhosted[e.stationId] = (stationGhosted[e.stationId] || 0) + 1;
+  });
+
+  const rows = S.stations.map(st => {
+    const validTimes = ((S.serveTimes || {})[st.id] || []).filter(t => t >= 30_000 && t <= 30 * 60_000);
+    const avgStr = validTimes.length >= 3
+      ? Math.round(avgServiceMs(st.id) / 60_000) + ' min'
+      : '—';
+    return `<tr>
+      <td>${esc(st.name)}</td>
+      <td class="sum-num">${stationServed[st.id] || 0}</td>
+      <td class="sum-num sum-ghost">${stationGhosted[st.id] || 0}</td>
+      <td class="sum-num">${avgStr}</td>
+    </tr>`;
+  }).join('');
+
+  const totalServed  = S.stations.reduce((n, st) => n + (stationServed[st.id] || 0), 0);
+  const totalGhosted = S.stations.reduce((n, st) => n + (stationGhosted[st.id] || 0), 0);
+
+  body.innerHTML = `
+    <div class="sum-totals">
+      <span>Total Served: <b>${totalServed}</b></span>
+      <span>Total Ghosted: <b>${totalGhosted}</b></span>
+    </div>
+    <table class="sum-table">
+      <thead><tr>
+        <th>Station</th><th>Served</th><th>Ghosted</th><th>Avg Time</th>
+      </tr></thead>
+      <tbody>${rows || '<tr><td colspan="4" class="sum-empty">No data yet</td></tr>'}</tbody>
+    </table>
+    <button class="sum-export-btn" onclick="exportSummary()">↓ Export Summary CSV</button>
+  `;
+  document.getElementById('summary-modal').classList.add('open');
+}
+
+function closeSummary() {
+  document.getElementById('summary-modal').classList.remove('open');
+}
+
+function exportSummary() {
+  const stationServed  = {};
+  const stationGhosted = {};
+  S.stations.forEach(st => { stationServed[st.id] = 0; stationGhosted[st.id] = 0; });
+  (S.log || []).forEach(e => {
+    if (e.type === 'served')  stationServed[e.stationId]  = (stationServed[e.stationId]  || 0) + 1;
+    if (e.type === 'ghosted') stationGhosted[e.stationId] = (stationGhosted[e.stationId] || 0) + 1;
+  });
+
+  const rows = [['Station', 'Served', 'Ghosted', 'Avg Service Time (min)']];
+  S.stations.forEach(st => {
+    const validTimes = ((S.serveTimes || {})[st.id] || []).filter(t => t >= 30_000 && t <= 30 * 60_000);
+    const avgStr = validTimes.length >= 3 ? Math.round(avgServiceMs(st.id) / 60_000) : '';
+    rows.push([st.name, stationServed[st.id] || 0, stationGhosted[st.id] || 0, avgStr]);
+  });
+  const totalServed  = S.stations.reduce((n, st) => n + (stationServed[st.id] || 0), 0);
+  const totalGhosted = S.stations.reduce((n, st) => n + (stationGhosted[st.id] || 0), 0);
+  rows.push(['TOTAL', totalServed, totalGhosted, '']);
+
+  const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = 'nasa-fair-summary-' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+}
+
 /* ── RESET MODAL ─────────────────────────── */
 function openResetModal()  { document.getElementById('reset-modal').classList.add('open'); }
 function closeResetModal() { document.getElementById('reset-modal').classList.remove('open'); }
@@ -294,11 +431,13 @@ function doReset(type) {
       S.unassigned = []; S.ghosted = []; S.done = []; S.log = [];
       S.stations.forEach(st => { S.queues[st.id] = []; S.serving[st.id] = null; });
       S.onBreak = {}; S.hidden = {};
+      S.serveStart = {}; S.serveTimes = {};
       break;
     case 'full':
       S = {
         stations: [], queues: {}, serving: {}, onBreak: {}, hidden: {},
         unassigned: [], ghosted: [], done: [], log: [],
+        serveStart: {}, serveTimes: {},
         settings: S.settings
       };
       break;
@@ -330,7 +469,7 @@ document.addEventListener('keydown', e => {
     const st  = S.stations[idx];
     if (st && !(S.onBreak || {})[st.id]) callNext(st.id);
   }
-  if (e.key === 'Escape') closeResetModal();
+  if (e.key === 'Escape') { closeResetModal(); closeSummary(); }
 });
 
 /* ── DRAG & DROP ─────────────────────────── */
@@ -459,11 +598,14 @@ function onServingDrop(e, sid) {
   saveUndo();
   const { cid } = drag;
   if (S.serving[sid]) {
+    recordServeDuration(sid);
     logEntry(sid, S.serving[sid], 'served');
     S.done.push(S.serving[sid]);
   }
   pluck(cid);
   S.serving[sid] = cid;
+  S.serveStart = S.serveStart || {};
+  S.serveStart[sid] = Date.now();
   drag = null; sync();
 }
 
@@ -501,18 +643,21 @@ function renderUnassigned() {
 }
 
 function renderStations() {
-  const area     = document.getElementById('stations-area');
-  const onBreak  = S.onBreak || {};
-  const hidden   = S.hidden  || {};
+  const area    = document.getElementById('stations-area');
+  const onBreak = S.onBreak || {};
+  const hidden  = S.hidden  || {};
 
   area.innerHTML = S.stations.map((st, idx) => {
-    const q        = S.queues[st.id]  || [];
-    const srv      = S.serving[st.id] || null;
-    const isBreak  = !!onBreak[st.id];
-    const isHidden = !!hidden[st.id];
-    const kbdHint  = idx < 9
+    const q           = S.queues[st.id]  || [];
+    const srv         = S.serving[st.id] || null;
+    const isBreak     = !!onBreak[st.id];
+    const isHidden    = !!hidden[st.id];
+    const kbdHint     = idx < 9
       ? `<span class="kbd-hint" title="Keyboard shortcut">Alt+${idx + 1}</span>`
       : '';
+    const servedCount = (S.log || []).filter(e => e.stationId === st.id && e.type === 'served').length;
+    const waitMins    = estimatedWaitMins(st.id, q.length);
+    const undoEntry   = dismissUndo[st.id] || null;
 
     return `
     <div class="station-col${isBreak ? ' col-on-break' : ''}${isHidden ? ' col-hidden' : ''}" id="col-${st.id}"
@@ -532,6 +677,7 @@ function renderStations() {
           <input class="station-name-ar" value="${esc(st.nameAr || '')}" placeholder="الاسم بالعربي (اختياري)"
             onblur="renameStationAr('${st.id}',this.value)"
             onkeydown="if(event.key==='Enter')this.blur()" />
+          ${servedCount > 0 ? `<span class="station-served-count">${servedCount} served</span>` : ''}
         </div>
         <button class="icon-btn hide-toggle${isHidden ? ' is-hidden' : ''}"
           onclick="toggleHidden('${st.id}')"
@@ -566,7 +712,12 @@ function renderStations() {
                  <button class="ghost-btn" onclick="ghostCandidate('${st.id}')" title="No-show — move to ghosted list">👻</button>
                  <button class="done-btn" onclick="dismiss('${st.id}')">✓ Done</button>
                </div>`
-            : '<div class="empty-serving">Nobody here — drag or press Call Next</div>'}
+            : `<div class="empty-serving">Nobody here — drag or press Call Next</div>
+               ${undoEntry ? `<div class="dismiss-undo-toast">
+                 <span>#${esc(undoEntry.cid)} dismissed</span>
+                 <button class="undo-dismiss-btn" onclick="undoDismiss('${st.id}')">↩ Undo</button>
+               </div>` : ''}`
+          }
         </div>
 
         <button class="call-next-btn" onclick="callNext('${st.id}')" ${!q.length ? 'disabled' : ''}>
@@ -587,6 +738,7 @@ function renderStations() {
                   <span class="c-num">${esc(cid)}</span>
                 </div>`).join('')
             : '<div class="empty-msg">Empty</div>'}
+          ${waitMins ? `<div class="est-wait">~${waitMins} min wait</div>` : ''}
         </div>
       `}
     </div>`;

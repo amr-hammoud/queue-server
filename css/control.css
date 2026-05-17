@@ -264,6 +264,67 @@ body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f0f2f5; 
   color: #999; text-align: center;
 }
 
+/* Station served count — dim label under name inputs */
+.station-served-count {
+  font-size: 9px; color: rgba(255,255,255,0.45);
+  letter-spacing: 0.5px; line-height: 1;
+}
+
+/* Estimated wait time — below queue list in control panel */
+.est-wait {
+  font-size: 10px; color: #9B4080; opacity: 0.65;
+  text-align: center; padding: 5px 0 2px;
+  letter-spacing: 0.5px; font-style: italic;
+}
+
+/* Dismiss undo toast — appears in serving zone after ✓ Done */
+.dismiss-undo-toast {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: rgba(107,21,88,0.09); border: 1px solid rgba(107,21,88,0.2);
+  border-radius: 6px; padding: 4px 8px; margin-top: 5px;
+  font-size: 11px; color: #6B1558;
+}
+.undo-dismiss-btn {
+  background: #6B1558; border: none; color: #fff;
+  cursor: pointer; border-radius: 5px; padding: 3px 10px;
+  font-size: 11px; font-weight: 600; transition: background 0.15s;
+  white-space: nowrap; flex-shrink: 0;
+}
+.undo-dismiss-btn:hover { background: #8B1F6B; }
+
+/* ── Session Summary Modal ───────────────── */
+.modal-box--wide { width: min(580px, 94vw); }
+
+.sum-totals {
+  display: flex; gap: 24px; font-size: 13px; color: #666;
+  padding-bottom: 12px; border-bottom: 1px solid #eee; flex-wrap: wrap;
+}
+.sum-totals b { color: #6B1558; font-size: 17px; }
+
+.sum-table {
+  width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px;
+}
+.sum-table th {
+  text-align: left; font-size: 10px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: #aaa; padding: 6px 8px;
+  border-bottom: 2px solid #eee;
+}
+.sum-table th:not(:first-child) { text-align: center; }
+.sum-table td { padding: 8px 8px; border-bottom: 1px solid #f2f2f2; color: #333; }
+.sum-table tr:last-child td { border-bottom: none; }
+.sum-table tr:hover td { background: #faf7fc; }
+.sum-num { text-align: center; font-weight: 600; }
+.sum-ghost { color: #9B2D8A; }
+.sum-empty { text-align: center; color: #bbb; font-style: italic; padding: 20px 0; }
+
+.sum-export-btn {
+  display: block; width: 100%; margin-top: 14px; padding: 9px;
+  background: #6B1558; color: #fff; border: none;
+  border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background 0.15s;
+}
+.sum-export-btn:hover { background: #8B1F6B; }
+
 /* ── Reset Modal ─────────────────────────── */
 .modal-overlay {
   display: none; position: fixed; inset: 0; z-index: 1000;

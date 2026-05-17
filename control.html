@@ -14,6 +14,7 @@
   <button class="tb-btn" id="undo-btn" onclick="undo()" disabled title="Undo last action (Ctrl+Z)">↺ Undo</button>
   <button class="tb-btn" onclick="autoDistribute()" title="Spread all unassigned candidates evenly across active stations">⚡ Auto-fill</button>
   <button class="tb-btn" onclick="exportLog()" title="Download served/ghosted log as CSV">↓ Log</button>
+  <button class="tb-btn" onclick="openSummary()" title="Session summary by station">📊 Summary</button>
   <button class="tb-btn reset-btn" onclick="openResetModal()" title="Reset options">⟳ Reset</button>
   <div class="tb-sep"></div>
   <div class="settings-group">
@@ -110,6 +111,17 @@
         </button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ── Session Summary Modal ───────────── -->
+<div id="summary-modal" class="modal-overlay" onclick="if(event.target===this)closeSummary()">
+  <div class="modal-box modal-box--wide">
+    <div class="modal-header">
+      <span class="modal-title">Session Summary</span>
+      <button class="modal-close" onclick="closeSummary()">✕</button>
+    </div>
+    <div class="modal-body" id="summary-body"></div>
   </div>
 </div>
 

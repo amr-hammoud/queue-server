@@ -1,9 +1,11 @@
 const BC = new BroadcastChannel('nasa_queue');
 let S = { stations:[], queues:{}, serving:{}, onBreak:{}, settings:{ queueSize:3, showQueue:true } };
 let prevServing = {};
+let prevQueues  = {};
 
 BC.onmessage = (e) => {
   prevServing = { ...S.serving };
+  prevQueues  = JSON.parse(JSON.stringify(S.queues || {}));
   const prevRecallTs = (S.recall || {}).ts || null;
   S = e.data;
   localStorage.setItem('nasa_q_v2', JSON.stringify(S));
@@ -22,6 +24,51 @@ BC.onmessage = (e) => {
 };
 
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ── WAIT TIME ───────────────────────────── */
+function avgServiceMs(stationId) {
+  const times = (S.serveTimes || {})[stationId] || [];
+  const valid = times.filter(t => t >= 30_000 && t <= 30 * 60_000);
+  if (valid.length < 3) return 5 * 60_000;
+  return valid.reduce((a, b) => a + b, 0) / valid.length;
+}
+
+function estimatedWaitMins(stationId, queueLength) {
+  if (!queueLength) return 0;
+  const avgMs = avgServiceMs(stationId);
+  const serveStart = (S.serveStart || {})[stationId];
+  const remainingCurrent = serveStart ? Math.max(0, avgMs - (Date.now() - serveStart)) : 0;
+  const totalMs = remainingCurrent + avgMs * (queueLength - 1);
+  if (totalMs < 60_000) return 0;
+  return Math.round(totalMs / 60_000);
+}
+
+/* ── TICKER ──────────────────────────────── */
+const TICKER_MESSAGES = [
+  'Welcome to NASA International Schools Annual Recruitment Fair · أهلاً بكم في معرض التوظيف السنوي لمدارس ناسا العالمية',
+  'NASA International Schools — Inspiring Excellence · Shaping Tomorrow\'s Leaders · Home of Visionaries',
+  'Thank you for joining us today · We are delighted to meet you · نشكركم على حضوركم ونسعد بلقائكم'
+];
+let tickerIndex = 0;
+
+function startTicker() {
+  const el = document.getElementById('ticker-text');
+  if (!el) return;
+  el.textContent = TICKER_MESSAGES[tickerIndex];
+  el.classList.remove('ticker-slide');
+  void el.offsetWidth;
+  el.classList.add('ticker-slide');
+}
+
+function advanceTicker() {
+  tickerIndex = (tickerIndex + 1) % TICKER_MESSAGES.length;
+  startTicker();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  startTicker();
+  setInterval(advanceTicker, 11000);
+});
 
 /* ── AUDIO ───────────────────────────────── */
 let audioCtx = null;
@@ -155,13 +202,17 @@ function render() {
 
     let queueHtml = '';
     if (showQ) {
-      const visible = q.slice(0, qSize);
+      const visible  = q.slice(0, qSize);
+      const waitMins = estimatedWaitMins(st.id, q.length);
+      const waitHtml = waitMins ? `<div class="est-wait-display">~${waitMins} min wait</div>` : '';
+      const prevQ    = prevQueues[st.id] || [];
+      const newItems = new Set(q.filter(x => !prevQ.includes(x)));
       queueHtml = visible.length
         ? `<div class="q-list">${visible.map((cid, i) =>
-            `<div class="q-item">
+            `<div class="q-item${newItems.has(cid) ? ' q-item-new' : ''}">
                <span class="qi-ord">${i + 1}</span>
                <span class="qi-num">${esc(cid)}</span>
-             </div>`).join('')}</div>`
+             </div>`).join('')}</div>${waitHtml}`
         : `<div class="st-empty">No one waiting</div>`;
     }
 
@@ -185,9 +236,10 @@ function render() {
   requestAnimationFrame(() => {
     document.querySelectorAll('[data-flash]').forEach(el => {
       el.removeAttribute('data-flash');
+      el.classList.remove('flip-enter');
       void el.offsetWidth;
-      el.classList.add('flash');
-      setTimeout(() => el.classList.remove('flash'), 650);
+      el.classList.add('flip-enter');
+      setTimeout(() => el.classList.remove('flip-enter'), 700);
     });
 
     if (newlyCalled.length) {
