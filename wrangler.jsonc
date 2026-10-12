@@ -1,0 +1,14 @@
+// Live demo of the queue system at queue.amrhammoud.com (Cloudflare Workers static assets).
+// The repo root is the site; .assetsignore keeps repo files out of the upload.
+// "/" opens the control panel (see _redirects); open display.html in a second tab.
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "queue-demo",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": ".", "html_handling": "auto-trailing-slash", "not_found_handling": "none" },
+  "workers_dev": false,
+  "preview_urls": true,
+  // Required by `wrangler preview`, which Workers Builds runs for non-production branches.
+  "previews": {},
+  "routes": [{ "pattern": "queue.amrhammoud.com", "custom_domain": true }]
+}
