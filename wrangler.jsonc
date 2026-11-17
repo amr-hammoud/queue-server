@@ -1,4 +1,4 @@
-// Live demo of the queue system at queue.amrhammoud.com (Cloudflare Workers static assets).
+// Live demo of the queue system at queue.makebase.dev (Cloudflare Workers static assets).
 // The repo root is the site; .assetsignore keeps repo files out of the upload.
 // "/" opens the control panel (see _redirects); open display.html in a second tab.
 {
@@ -10,5 +10,9 @@
   "preview_urls": true,
   // Required by `wrangler preview`, which Workers Builds runs for non-production branches.
   "previews": {},
-  "routes": [{ "pattern": "queue.amrhammoud.com", "custom_domain": true }]
+  "routes": [
+    { "pattern": "queue.makebase.dev", "custom_domain": true },
+    // Kept only so the amrhammoud.com zone redirect rule can 301 it to queue.makebase.dev.
+    { "pattern": "queue.amrhammoud.com", "custom_domain": true }
+  ]
 }
